@@ -74,18 +74,18 @@ Route::resource('stock-movements', StockMovementController::class);
     Route::resource('quotations', QuotationController::class);
 
     // Purchases
-    Route::resource('purchases', PurchaseController::class);
-Route::resource('suppliers', SupplierController::class);
     Route::get('/purchases/orders', [PurchaseController::class, 'orders'])->name('purchases.orders');
+    Route::resource('purchases', PurchaseController::class);
+    Route::resource('suppliers', SupplierController::class);
 
     // Customers
-    Route::resource('customers', CustomerController::class);
     Route::get('/customers/loyalty', [CustomerController::class, 'loyalty'])->name('customers.loyalty');
+    Route::resource('customers', CustomerController::class);
 
     // Employees
-    Route::resource('employees', EmployeeController::class);
-Route::get('/employees/roles', [EmployeeController::class, 'roles'])->name('employees.roles');
+    Route::get('/employees/roles', [EmployeeController::class, 'roles'])->name('employees.roles');
     Route::get('/employees/attendance', [EmployeeController::class, 'attendance'])->name('employees.attendance');
+    Route::resource('employees', EmployeeController::class);
 
     // Financial
     Route::get('/financial', [FinancialController::class, 'index'])->name('financial.index');

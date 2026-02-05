@@ -349,8 +349,6 @@ class PurchaseController extends Controller
     public function show($id)
     {
         $purchase = \App\Models\Purchase::with(['supplier', 'user', 'warehouse', 'items.product'])->findOrFail($id);
-    {
-        $purchase->load(['supplier', 'user', 'warehouse', 'items.product']);
         
         // Calculate payment progress
         $paymentProgress = $purchase->total > 0 ? ($purchase->paid_amount / $purchase->total) * 100 : 0;
