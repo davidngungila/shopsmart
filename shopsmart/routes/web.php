@@ -19,6 +19,7 @@ use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\QuotationReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UserRoleController;
+use App\Http\Controllers\ProfileController;
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -107,3 +108,22 @@ Route::prefix('settings')->name('settings.')->group(function () {
     Route::get('/backup', [SettingsController::class, 'backup'])->name('backup');
     Route::resource('user-roles', UserRoleController::class);
 });
+
+// Profile
+Route::middleware('auth')->prefix('profile')->name('profile.')->group(function () {
+    Route::get('/', [ProfileController::class, 'index'])->name('index');
+    Route::get('/edit', [ProfileController::class, 'edit'])->name('edit');
+    Route::put('/update', [ProfileController::class, 'update'])->name('update');
+    Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password.update');
+    Route::put('/preferences', [ProfileController::class, 'updatePreferences'])->name('preferences.update');
+    Route::get('/activity', [ProfileController::class, 'activity'])->name('activity');
+    Route::get('/security', [ProfileController::class, 'security'])->name('security');
+});
+
+// Logout
+Route::post('/logout', function () {
+    auth()->logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/');
+})->name('logout');
