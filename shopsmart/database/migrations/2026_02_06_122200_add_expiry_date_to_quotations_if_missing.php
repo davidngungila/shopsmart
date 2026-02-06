@@ -12,23 +12,30 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('quotations', function (Blueprint $table) {
+            if (!Schema::hasColumn('quotations', 'quotation_date')) {
+                $table->date('quotation_date')->nullable();
+            }
             if (!Schema::hasColumn('quotations', 'expiry_date')) {
-                $table->date('expiry_date')->nullable()->after('quotation_date');
+                $table->date('expiry_date')->nullable();
             }
             if (!Schema::hasColumn('quotations', 'terms_conditions')) {
-                $table->text('terms_conditions')->nullable()->after('expiry_date');
+                $table->text('terms_conditions')->nullable();
             }
             if (!Schema::hasColumn('quotations', 'customer_notes')) {
-                $table->text('customer_notes')->nullable()->after('notes');
+                $table->text('customer_notes')->nullable();
             }
             if (!Schema::hasColumn('quotations', 'is_sent')) {
-                $table->boolean('is_sent')->default(false)->after('customer_notes');
+                $table->boolean('is_sent')->default(false);
             }
             if (!Schema::hasColumn('quotations', 'sent_at')) {
-                $table->timestamp('sent_at')->nullable()->after('is_sent');
+                $table->timestamp('sent_at')->nullable();
             }
             if (!Schema::hasColumn('quotations', 'converted_to_sale_id')) {
-                $table->foreignId('converted_to_sale_id')->nullable()->after('sent_at')->constrained('sales')->nullOnDelete();
+                if (Schema::hasTable('sales')) {
+                    $table->foreignId('converted_to_sale_id')->nullable()->constrained('sales')->nullOnDelete();
+                } else {
+                    $table->unsignedBigInteger('converted_to_sale_id')->nullable();
+                }
             }
         });
     }
@@ -39,24 +46,37 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('quotations', function (Blueprint $table) {
+            $columnsToDrop = [];
+            
+            if (Schema::hasColumn('quotations', 'quotation_date')) {
+                $columnsToDrop[] = 'quotation_date';
+            }
             if (Schema::hasColumn('quotations', 'expiry_date')) {
-                $table->dropColumn('expiry_date');
+                $columnsToDrop[] = 'expiry_date';
             }
             if (Schema::hasColumn('quotations', 'terms_conditions')) {
-                $table->dropColumn('terms_conditions');
+                $columnsToDrop[] = 'terms_conditions';
             }
             if (Schema::hasColumn('quotations', 'customer_notes')) {
-                $table->dropColumn('customer_notes');
+                $columnsToDrop[] = 'customer_notes';
             }
             if (Schema::hasColumn('quotations', 'is_sent')) {
-                $table->dropColumn('is_sent');
+                $columnsToDrop[] = 'is_sent';
             }
             if (Schema::hasColumn('quotations', 'sent_at')) {
-                $table->dropColumn('sent_at');
+                $columnsToDrop[] = 'sent_at';
             }
             if (Schema::hasColumn('quotations', 'converted_to_sale_id')) {
-                $table->dropForeign(['converted_to_sale_id']);
-                $table->dropColumn('converted_to_sale_id');
+                try {
+                    $table->dropForeign(['converted_to_sale_id']);
+                } catch (\Exception $e) {
+                    // Foreign key might not exist
+                }
+                $columnsToDrop[] = 'converted_to_sale_id';
+            }
+            
+            if (!empty($columnsToDrop)) {
+                $table->dropColumn($columnsToDrop);
             }
         });
     }
