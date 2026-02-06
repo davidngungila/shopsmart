@@ -12,19 +12,19 @@
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('quotations.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Back</a>
             @if($quotation->status !== 'converted')
-            <a href="{{ route('quotations.edit', $quotation) }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Edit</a>
+            <a href="{{ route('quotations.edit', $quotation) }}" class="px-4 py-2 rounded-lg text-white" style="background-color: #009245;" onmouseover="this.style.backgroundColor='#007a38'" onmouseout="this.style.backgroundColor='#009245'">Edit</a>
             @endif
-            <a href="{{ route('quotations.pdf', $quotation) }}" target="_blank" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Download PDF</a>
+            <a href="{{ route('quotations.pdf', $quotation) }}" target="_blank" class="px-4 py-2 rounded-lg text-white" style="background-color: #009245;" onmouseover="this.style.backgroundColor='#007a38'" onmouseout="this.style.backgroundColor='#009245'">Download PDF</a>
             @if($quotation->customer && $quotation->customer->email)
             <form action="{{ route('quotations.send-email', $quotation) }}" method="POST" class="inline">
                 @csrf
-                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Send Email</button>
+                <button type="submit" class="px-4 py-2 rounded-lg text-white" style="background-color: #009245;" onmouseover="this.style.backgroundColor='#007a38'" onmouseout="this.style.backgroundColor='#009245'">Send Email</button>
             </form>
             @endif
             @if($quotation->canBeConverted())
             <form action="{{ route('quotations.convert-to-sale', $quotation) }}" method="POST" class="inline">
                 @csrf
-                <button type="submit" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700" onclick="return confirm('Convert this quotation to a sale? This will reduce inventory.')">Convert to Sale</button>
+                <button type="submit" class="px-4 py-2 rounded-lg text-white" style="background-color: #009245;" onmouseover="this.style.backgroundColor='#007a38'" onmouseout="this.style.backgroundColor='#009245'" onclick="return confirm('Convert this quotation to a sale? This will reduce inventory.')">Convert to Sale</button>
             </form>
             @endif
         </div>
@@ -103,9 +103,9 @@
                                     @endif
                                 </td>
                                 <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $item->quantity }}</td>
-                                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ number_format($item->unit_price, 2) }}</td>
-                                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ number_format($item->discount, 2) }}</td>
-                                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 text-right">${{ number_format($item->total, 2) }}</td>
+                                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->unit_price, 2) }} TZS</td>
+                                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($item->discount, 2) }} TZS</td>
+                                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 text-right">{{ number_format($item->total, 2) }} TZS</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -140,19 +140,19 @@
                 <div class="space-y-3">
                     <div class="flex justify-between text-sm">
                         <span class="text-gray-600">Subtotal:</span>
-                        <span class="font-semibold">${{ number_format($quotation->subtotal, 2) }}</span>
+                        <span class="font-semibold">{{ number_format($quotation->subtotal ?? 0, 2) }} TZS</span>
                     </div>
                     <div class="flex justify-between text-sm">
                         <span class="text-gray-600">Discount:</span>
-                        <span class="font-semibold">${{ number_format($quotation->discount, 2) }}</span>
+                        <span class="font-semibold">{{ number_format($quotation->discount ?? 0, 2) }} TZS</span>
                     </div>
                     <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">Tax (10%):</span>
-                        <span class="font-semibold">${{ number_format($quotation->tax, 2) }}</span>
+                        <span class="text-gray-600">Tax:</span>
+                        <span class="font-semibold">{{ number_format($quotation->tax ?? 0, 2) }} TZS</span>
                     </div>
                     <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-3">
                         <span>Total:</span>
-                        <span>${{ number_format($quotation->total, 2) }}</span>
+                        <span>{{ number_format($quotation->total ?? 0, 2) }} TZS</span>
                     </div>
                 </div>
             </div>
