@@ -26,6 +26,9 @@ class CategoryController extends Controller
             'is_active' => 'boolean',
         ]);
 
+        // Generate slug from name if not provided
+        $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+
         Category::create($validated);
         return redirect()->route('categories.index')->with('success', 'Category created successfully.');
     }
@@ -48,6 +51,11 @@ class CategoryController extends Controller
             'description' => 'nullable|string',
             'is_active' => 'boolean',
         ]);
+
+        // Generate slug from name if name changed
+        if ($category->name !== $validated['name']) {
+            $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+        }
 
         $category->update($validated);
         return redirect()->route('categories.index')->with('success', 'Category updated successfully.');
