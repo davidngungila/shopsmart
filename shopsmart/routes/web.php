@@ -29,6 +29,7 @@ use App\Http\Controllers\DeliveryNoteController;
 use App\Http\Controllers\FinancialStatementController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Auth;
 
 // Authentication Routes (Public)
@@ -49,6 +50,9 @@ Route::get('/', function () {
 // Protected Routes (Require Authentication)
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    
+    // Global Search
+    Route::get('/search', [SearchController::class, 'search'])->name('search');
 
     // Products/Inventory
     Route::resource('products', ProductController::class);

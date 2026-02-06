@@ -472,12 +472,75 @@
             <header class="bg-white border-b border-gray-200 sticky top-0 z-20">
                 <div class="px-6 py-4">
                     <div class="flex items-center justify-between">
-                        <div class="flex-1 max-w-xl">
+                        <div class="flex-1 max-w-xl" x-data="{ searchOpen: false }" @keydown.ctrl.k.prevent="searchOpen = true; $nextTick(() => document.getElementById('search-input')?.focus())" @keydown.meta.k.prevent="searchOpen = true; $nextTick(() => document.getElementById('search-input')?.focus())">
                             <div class="relative">
-                                <input type="text" placeholder="Search (Ctrl+K)" class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009245] focus:border-transparent">
+                                <input 
+                                    type="text" 
+                                    placeholder="Search (Ctrl+K)" 
+                                    @click="searchOpen = true; $nextTick(() => document.getElementById('search-input')?.focus())"
+                                    class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009245] focus:border-transparent cursor-pointer"
+                                    readonly
+                                >
                                 <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                 </svg>
+                                
+                                <!-- Search Modal -->
+                                <div 
+                                    x-show="searchOpen" 
+                                    @click.away="searchOpen = false"
+                                    x-cloak
+                                    x-transition:enter="transition ease-out duration-200"
+                                    x-transition:enter-start="opacity-0"
+                                    x-transition:enter-end="opacity-100"
+                                    x-transition:leave="transition ease-in duration-150"
+                                    x-transition:leave-start="opacity-100"
+                                    x-transition:leave-end="opacity-0"
+                                    class="fixed inset-0 z-50 overflow-y-auto"
+                                    style="background-color: rgba(0, 0, 0, 0.5);"
+                                >
+                                    <div class="flex items-start justify-center min-h-screen pt-20 px-4">
+                                        <div 
+                                            class="bg-white rounded-lg shadow-xl max-w-2xl w-full" 
+                                            @click.stop
+                                            x-transition:enter="transition ease-out duration-200"
+                                            x-transition:enter-start="opacity-0 transform scale-95"
+                                            x-transition:enter-end="opacity-100 transform scale-100"
+                                            x-transition:leave="transition ease-in duration-150"
+                                            x-transition:leave-start="opacity-100 transform scale-100"
+                                            x-transition:leave-end="opacity-0 transform scale-95"
+                                        >
+                                            <div class="p-4 border-b border-gray-200">
+                                                <div class="relative">
+                                                    <input 
+                                                        type="text" 
+                                                        id="search-input"
+                                                        placeholder="Search products, customers, sales, quotations..." 
+                                                        autocomplete="off"
+                                                        @keydown.escape="searchOpen = false"
+                                                        class="w-full px-4 py-3 pl-10 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009245] focus:border-transparent text-lg"
+                                                    >
+                                                    <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                                    </svg>
+                                                    <button 
+                                                        @click="searchOpen = false"
+                                                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                    >
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div id="search-results" class="max-h-96 overflow-y-auto p-4">
+                                                <div class="text-center text-gray-500 py-8">
+                                                    <p>Start typing to search...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="flex items-center space-x-4 ml-6" x-data="{ open: false }">
@@ -838,6 +901,123 @@
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('-translate-x-full');
         });
+
+        // Global Search Functionality
+        (function() {
+            let searchTimeout;
+            const searchInput = document.getElementById('search-input');
+            const searchResults = document.getElementById('search-results');
+            
+            if (!searchInput || !searchResults) return;
+
+            // Focus input when modal opens
+            const observer = new MutationObserver(() => {
+                if (searchInput && searchInput.offsetParent !== null) {
+                    searchInput.focus();
+                }
+            });
+            
+            if (searchResults) {
+                observer.observe(searchResults.parentElement, { childList: true, subtree: true });
+            }
+
+            // Live search on input
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.trim();
+                
+                clearTimeout(searchTimeout);
+                
+                if (query.length < 2) {
+                    searchResults.innerHTML = '<div class="text-center text-gray-500 py-8"><p>Type at least 2 characters to search...</p></div>';
+                    return;
+                }
+
+                searchResults.innerHTML = '<div class="text-center text-gray-500 py-8"><p>Searching...</p></div>';
+
+                searchTimeout = setTimeout(() => {
+                    fetch(`{{ route('search') }}?q=${encodeURIComponent(query)}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        displaySearchResults(data, query);
+                    })
+                    .catch(error => {
+                        console.error('Search error:', error);
+                        searchResults.innerHTML = '<div class="text-center text-red-500 py-8"><p>Error searching. Please try again.</p></div>';
+                    });
+                }, 300);
+            });
+
+            function displaySearchResults(data, query) {
+                const allResults = [
+                    ...data.products.map(r => ({...r, category: 'Products'})),
+                    ...data.customers.map(r => ({...r, category: 'Customers'})),
+                    ...data.sales.map(r => ({...r, category: 'Sales'})),
+                    ...data.quotations.map(r => ({...r, category: 'Quotations'})),
+                    ...data.purchases.map(r => ({...r, category: 'Purchases'})),
+                    ...data.suppliers.map(r => ({...r, category: 'Suppliers'})),
+                    ...data.categories.map(r => ({...r, category: 'Categories'})),
+                    ...data.warehouses.map(r => ({...r, category: 'Warehouses'})),
+                ];
+
+                if (allResults.length === 0) {
+                    searchResults.innerHTML = `<div class="text-center text-gray-500 py-8"><p>No results found for "${query}"</p></div>`;
+                    return;
+                }
+
+                // Group by category
+                const grouped = {};
+                allResults.forEach(result => {
+                    if (!grouped[result.category]) {
+                        grouped[result.category] = [];
+                    }
+                    grouped[result.category].push(result);
+                });
+
+                let html = '';
+                Object.keys(grouped).forEach(category => {
+                    html += `<div class="mb-4"><h3 class="text-xs font-semibold text-gray-500 uppercase mb-2 px-2">${category}</h3>`;
+                    grouped[category].forEach(result => {
+                        html += `
+                            <a href="${result.url}" class="block px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors border-b border-gray-100 last:border-0">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-2xl">${result.icon}</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 truncate">${highlightText(result.name || result.invoice_number || result.quotation_number || result.purchase_number, query)}</p>
+                                        ${result.sku ? `<p class="text-xs text-gray-500">SKU: ${result.sku}</p>` : ''}
+                                        ${result.email ? `<p class="text-xs text-gray-500">${result.email}</p>` : ''}
+                                        ${result.customer ? `<p class="text-xs text-gray-500">Customer: ${result.customer}</p>` : ''}
+                                        ${result.supplier ? `<p class="text-xs text-gray-500">Supplier: ${result.supplier}</p>` : ''}
+                                        ${result.price ? `<p class="text-xs text-gray-500">Price: ${result.price} TZS</p>` : ''}
+                                        ${result.total ? `<p class="text-xs text-gray-500">Total: ${result.total} TZS</p>` : ''}
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                    });
+                    html += '</div>';
+                });
+
+                searchResults.innerHTML = html;
+            }
+
+            function highlightText(text, query) {
+                if (!text || !query) return text;
+                const regex = new RegExp(`(${query})`, 'gi');
+                return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
+            }
+
+            // Keyboard navigation
+            searchInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    document.querySelector('[x-data*="searchOpen"]')?.__x?.$data.searchOpen = false;
+                }
+            });
+        })();
     </script>
 </body>
 </html>
