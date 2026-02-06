@@ -11,18 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('suppliers', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->nullable();
-            $table->string('phone')->nullable();
-            $table->text('address')->nullable();
-            $table->string('contact_person')->nullable();
-            $table->decimal('balance', 15, 2)->default(0);
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
-    }
+        if (!Schema::hasTable('suppliers')) {
+            Schema::create('suppliers', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->string('email')->nullable();
+                $table->string('phone')->nullable();
+                $table->text('address')->nullable();
+                $table->string('contact_person')->nullable();
+                $table->decimal('balance', 15, 2)->default(0);
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+            });
+        }
 
     /**
      * Reverse the migrations.

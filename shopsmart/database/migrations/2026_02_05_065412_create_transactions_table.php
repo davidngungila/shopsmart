@@ -11,19 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transactions', function (Blueprint $table) {
-            $table->id();
-            $table->string('transaction_number')->unique();
-            $table->enum('type', ['income', 'expense', 'transfer'])->default('income');
-            $table->enum('category', ['sale', 'purchase', 'salary', 'rent', 'utility', 'other'])->default('other');
-            $table->decimal('amount', 15, 2);
-            $table->enum('payment_method', ['cash', 'card', 'bank', 'mobile_money'])->default('cash');
-            $table->text('description')->nullable();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->date('transaction_date');
-            $table->timestamps();
-        });
-    }
+        if (!Schema::hasTable('transactions')) {
+            Schema::create('transactions', function (Blueprint $table) {
+                $table->id();
+                $table->string('transaction_number')->unique();
+                $table->enum('type', ['income', 'expense', 'transfer'])->default('income');
+                $table->enum('category', ['sale', 'purchase', 'salary', 'rent', 'utility', 'other'])->default('other');
+                $table->decimal('amount', 15, 2);
+                $table->enum('payment_method', ['cash', 'card', 'bank', 'mobile_money'])->default('cash');
+                $table->text('description')->nullable();
+                $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+                $table->date('transaction_date');
+                $table->timestamps();
+            });
+        }
 
     /**
      * Reverse the migrations.

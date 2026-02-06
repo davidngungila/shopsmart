@@ -11,17 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('expense_categories', function (Blueprint $table) {
-            $table->id();
-            $table->string('name')->unique();
-            $table->string('code')->unique()->nullable();
-            $table->text('description')->nullable();
-            $table->foreignId('account_id')->nullable()->constrained('chart_of_accounts')->nullOnDelete();
-            $table->boolean('is_active')->default(true);
-            $table->integer('sort_order')->default(0);
-            $table->timestamps();
-        });
-    }
+        if (!Schema::hasTable('expense_categories')) {
+            Schema::create('expense_categories', function (Blueprint $table) {
+                $table->id();
+                $table->string('name')->unique();
+                $table->string('code')->unique()->nullable();
+                $table->text('description')->nullable();
+                $table->foreignId('account_id')->nullable()->constrained('chart_of_accounts')->nullOnDelete();
+                $table->boolean('is_active')->default(true);
+                $table->integer('sort_order')->default(0);
+                $table->timestamps();
+            });
+        }
 
     /**
      * Reverse the migrations.

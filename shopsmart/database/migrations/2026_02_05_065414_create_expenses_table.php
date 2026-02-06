@@ -11,18 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('expenses', function (Blueprint $table) {
-            $table->id();
-            $table->string('expense_number')->unique();
-            $table->string('category');
-            $table->decimal('amount', 15, 2);
-            $table->text('description')->nullable();
-            $table->enum('payment_method', ['cash', 'card', 'bank', 'mobile_money'])->default('cash');
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->date('expense_date');
-            $table->string('receipt')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('expenses')) {
+            Schema::create('expenses', function (Blueprint $table) {
+                $table->id();
+                $table->string('expense_number')->unique();
+                $table->string('category');
+                $table->decimal('amount', 15, 2);
+                $table->text('description')->nullable();
+                $table->enum('payment_method', ['cash', 'card', 'bank', 'mobile_money'])->default('cash');
+                $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+                $table->date('expense_date');
+                $table->string('receipt')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     /**

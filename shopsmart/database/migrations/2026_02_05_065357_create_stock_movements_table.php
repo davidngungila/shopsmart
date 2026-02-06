@@ -11,17 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('stock_movements', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('warehouse_id')->nullable()->constrained()->nullOnDelete();
-            $table->enum('type', ['in', 'out', 'return', 'adjustment'])->default('in');
-            $table->integer('quantity');
-            $table->text('notes')->nullable();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->timestamps();
-        });
-    }
+        if (!Schema::hasTable('stock_movements')) {
+            Schema::create('stock_movements', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('product_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('warehouse_id')->nullable()->constrained()->nullOnDelete();
+                $table->enum('type', ['in', 'out', 'return', 'adjustment'])->default('in');
+                $table->integer('quantity');
+                $table->text('notes')->nullable();
+                $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+                $table->timestamps();
+            });
+        }
 
     /**
      * Reverse the migrations.

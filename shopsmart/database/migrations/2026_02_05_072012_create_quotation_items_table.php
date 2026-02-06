@@ -11,18 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('quotation_items', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('quotation_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
-            $table->integer('quantity');
-            $table->decimal('unit_price', 15, 2);
-            $table->decimal('discount', 15, 2)->default(0);
-            $table->decimal('total', 15, 2);
-            $table->text('description')->nullable();
-            $table->timestamps();
-        });
-    }
+        if (!Schema::hasTable('quotation_items')) {
+            Schema::create('quotation_items', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('quotation_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('product_id')->constrained()->cascadeOnDelete();
+                $table->integer('quantity');
+                $table->decimal('unit_price', 15, 2);
+                $table->decimal('discount', 15, 2)->default(0);
+                $table->decimal('total', 15, 2);
+                $table->text('description')->nullable();
+                $table->timestamps();
+            });
+        }
 
     /**
      * Reverse the migrations.

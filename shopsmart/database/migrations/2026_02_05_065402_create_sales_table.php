@@ -11,22 +11,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('sales', function (Blueprint $table) {
-            $table->id();
-            $table->string('invoice_number')->unique();
-            $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('warehouse_id')->nullable()->constrained()->nullOnDelete();
-            $table->decimal('subtotal', 15, 2)->default(0);
-            $table->decimal('discount', 15, 2)->default(0);
-            $table->decimal('tax', 15, 2)->default(0);
-            $table->decimal('total', 15, 2)->default(0);
-            $table->enum('payment_method', ['cash', 'card', 'mobile_money', 'bank_transfer', 'credit'])->default('cash');
-            $table->enum('status', ['pending', 'completed', 'cancelled', 'refunded'])->default('completed');
-            $table->text('notes')->nullable();
-            $table->timestamps();
-        });
-    }
+        if (!Schema::hasTable('sales')) {
+            Schema::create('sales', function (Blueprint $table) {
+                $table->id();
+                $table->string('invoice_number')->unique();
+                $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
+                $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('warehouse_id')->nullable()->constrained()->nullOnDelete();
+                $table->decimal('subtotal', 15, 2)->default(0);
+                $table->decimal('discount', 15, 2)->default(0);
+                $table->decimal('tax', 15, 2)->default(0);
+                $table->decimal('total', 15, 2)->default(0);
+                $table->enum('payment_method', ['cash', 'card', 'mobile_money', 'bank_transfer', 'credit'])->default('cash');
+                $table->enum('status', ['pending', 'completed', 'cancelled', 'refunded'])->default('completed');
+                $table->text('notes')->nullable();
+                $table->timestamps();
+            });
+        }
 
     /**
      * Reverse the migrations.
