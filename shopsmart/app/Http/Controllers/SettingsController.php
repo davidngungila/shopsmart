@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\CommunicationConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -338,76 +339,235 @@ class SettingsController extends Controller
         }
     }
 
-    public function communication()
+    // Communication Configurations - List
+    public function communicationIndex()
     {
-        $settings = Setting::getGroup('communication');
-        return view('settings.communication', compact('settings'));
+        $emailConfigs = CommunicationConfig::where('type', 'email')->orderBy('is_primary', 'desc')->orderBy('name', 'asc')->get();
+        $smsConfigs = CommunicationConfig::where('type', 'sms')->orderBy('is_primary', 'desc')->orderBy('name', 'asc')->get();
+        return view('settings.communication.index', compact('emailConfigs', 'smsConfigs'));
     }
 
-    public function updateCommunication(Request $request)
+    // Email Configuration - Create
+    public function emailCreate()
     {
-        $type = $request->input('type');
-        
-        if ($type === 'email') {
-            $validated = $request->validate([
-                'email_enabled' => 'boolean',
-                'mail_mailer' => 'nullable|in:smtp,sendmail,mailgun,ses,postmark,resend,log,array',
-                'mail_from_address' => 'nullable|email|max:255',
-                'mail_from_name' => 'nullable|string|max:255',
-                'mail_host' => 'nullable|string|max:255',
-                'mail_port' => 'nullable|integer|min:1|max:65535',
-                'mail_encryption' => 'nullable|in:tls,ssl,',
-                'mail_username' => 'nullable|string|max:255',
-                'mail_password' => 'nullable|string|max:255',
-            ]);
+        return view('settings.communication.email');
+    }
 
-            foreach ($validated as $key => $value) {
-                if ($key === 'mail_password' && empty($value)) {
-                    continue; // Don't update password if empty
-                }
-                Setting::set($key, is_bool($value) ? ($value ? '1' : '0') : $value, 'communication', is_bool($value) ? 'boolean' : 'text');
-            }
+    // Email Configuration - Store
+    public function emailStore(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+            'mail_mailer' => 'nullable|in:smtp,sendmail,mailgun,ses,postmark,resend,log,array',
+            'mail_from_address' => 'required|email|max:255',
+            'mail_from_name' => 'nullable|string|max:255',
+            'mail_host' => 'nullable|string|max:255',
+            'mail_port' => 'nullable|integer|min:1|max:65535',
+            'mail_encryption' => 'nullable|in:tls,ssl,',
+            'mail_username' => 'nullable|string|max:255',
+            'mail_password' => 'nullable|string|max:255',
+        ]);
 
-            // Update .env file or config cache
-            $this->updateMailConfig($validated);
+        $config = [
+            'mail_mailer' => $validated['mail_mailer'] ?? 'smtp',
+            'mail_from_address' => $validated['mail_from_address'],
+            'mail_from_name' => $validated['mail_from_name'] ?? '',
+            'mail_host' => $validated['mail_host'] ?? '',
+            'mail_port' => $validated['mail_port'] ?? '',
+            'mail_encryption' => $validated['mail_encryption'] ?? 'tls',
+            'mail_username' => $validated['mail_username'] ?? '',
+            'mail_password' => $validated['mail_password'] ?? '',
+        ];
 
-            return back()->with('success', 'Email settings updated successfully.');
-        } elseif ($type === 'sms') {
-            $validated = $request->validate([
-                'sms_enabled' => 'boolean',
-                'sms_provider' => 'nullable|in:twilio,nexmo,aws_sns,messagebird,plivo,custom',
-                'sms_api_key' => 'nullable|string|max:255',
-                'sms_api_secret' => 'nullable|string|max:255',
-                'sms_from' => 'nullable|string|max:50',
-                'sms_api_url' => 'nullable|url|max:255',
-                'sms_region' => 'nullable|string|max:50',
-                'sms_country_code' => 'nullable|string|max:10',
-            ]);
+        $communicationConfig = CommunicationConfig::create([
+            'name' => $validated['name'],
+            'type' => 'email',
+            'description' => $validated['description'] ?? null,
+            'is_active' => $validated['is_active'] ?? true,
+            'is_primary' => false,
+            'config' => $config,
+        ]);
 
-            foreach ($validated as $key => $value) {
-                if ($key === 'sms_api_secret' && empty($value)) {
-                    continue; // Don't update secret if empty
-                }
-                Setting::set($key, is_bool($value) ? ($value ? '1' : '0') : $value, 'communication', is_bool($value) ? 'boolean' : 'text');
-            }
+        return redirect()->route('settings.communication.index')->with('success', 'Email configuration created successfully.');
+    }
 
-            return back()->with('success', 'SMS settings updated successfully.');
+    // Email Configuration - Edit
+    public function emailEdit($id)
+    {
+        $config = CommunicationConfig::findOrFail($id);
+        if ($config->type !== 'email') {
+            return redirect()->route('settings.communication.index')->with('error', 'Invalid configuration type.');
+        }
+        return view('settings.communication.email', compact('config'));
+    }
+
+    // Email Configuration - Update
+    public function emailUpdate(Request $request, $id)
+    {
+        $config = CommunicationConfig::findOrFail($id);
+        if ($config->type !== 'email') {
+            return redirect()->route('settings.communication.index')->with('error', 'Invalid configuration type.');
         }
 
-        return back()->with('error', 'Invalid configuration type.');
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+            'mail_mailer' => 'nullable|in:smtp,sendmail,mailgun,ses,postmark,resend,log,array',
+            'mail_from_address' => 'required|email|max:255',
+            'mail_from_name' => 'nullable|string|max:255',
+            'mail_host' => 'nullable|string|max:255',
+            'mail_port' => 'nullable|integer|min:1|max:65535',
+            'mail_encryption' => 'nullable|in:tls,ssl,',
+            'mail_username' => 'nullable|string|max:255',
+            'mail_password' => 'nullable|string|max:255',
+        ]);
+
+        $configData = $config->config;
+        $configData['mail_mailer'] = $validated['mail_mailer'] ?? $configData['mail_mailer'] ?? 'smtp';
+        $configData['mail_from_address'] = $validated['mail_from_address'];
+        $configData['mail_from_name'] = $validated['mail_from_name'] ?? $configData['mail_from_name'] ?? '';
+        $configData['mail_host'] = $validated['mail_host'] ?? $configData['mail_host'] ?? '';
+        $configData['mail_port'] = $validated['mail_port'] ?? $configData['mail_port'] ?? '';
+        $configData['mail_encryption'] = $validated['mail_encryption'] ?? $configData['mail_encryption'] ?? 'tls';
+        $configData['mail_username'] = $validated['mail_username'] ?? $configData['mail_username'] ?? '';
+        
+        // Only update password if provided
+        if (!empty($validated['mail_password'])) {
+            $configData['mail_password'] = $validated['mail_password'];
+        }
+
+        $config->update([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'is_active' => $validated['is_active'] ?? true,
+            'config' => $configData,
+        ]);
+
+        return redirect()->route('settings.communication.index')->with('success', 'Email configuration updated successfully.');
     }
 
-    protected function updateMailConfig(array $settings)
+    // SMS Configuration - Create
+    public function smsCreate()
     {
-        // Note: In production, you might want to update .env file directly
-        // For now, we'll just store in settings and use them when sending emails
-        // You can extend this to update .env or use config caching
+        return view('settings.communication.sms');
+    }
+
+    // SMS Configuration - Store
+    public function smsStore(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+            'sms_provider' => 'nullable|in:twilio,nexmo,aws_sns,messagebird,plivo,custom',
+            'sms_api_key' => 'nullable|string|max:255',
+            'sms_api_secret' => 'nullable|string|max:255',
+            'sms_from' => 'nullable|string|max:50',
+            'sms_api_url' => 'nullable|url|max:255',
+            'sms_region' => 'nullable|string|max:50',
+            'sms_country_code' => 'nullable|string|max:10',
+        ]);
+
+        $config = [
+            'sms_provider' => $validated['sms_provider'] ?? 'twilio',
+            'sms_api_key' => $validated['sms_api_key'] ?? '',
+            'sms_api_secret' => $validated['sms_api_secret'] ?? '',
+            'sms_from' => $validated['sms_from'] ?? '',
+            'sms_api_url' => $validated['sms_api_url'] ?? '',
+            'sms_region' => $validated['sms_region'] ?? '',
+            'sms_country_code' => $validated['sms_country_code'] ?? '+1',
+        ];
+
+        $communicationConfig = CommunicationConfig::create([
+            'name' => $validated['name'],
+            'type' => 'sms',
+            'description' => $validated['description'] ?? null,
+            'is_active' => $validated['is_active'] ?? true,
+            'is_primary' => false,
+            'config' => $config,
+        ]);
+
+        return redirect()->route('settings.communication.index')->with('success', 'SMS configuration created successfully.');
+    }
+
+    // SMS Configuration - Edit
+    public function smsEdit($id)
+    {
+        $config = CommunicationConfig::findOrFail($id);
+        if ($config->type !== 'sms') {
+            return redirect()->route('settings.communication.index')->with('error', 'Invalid configuration type.');
+        }
+        return view('settings.communication.sms', compact('config'));
+    }
+
+    // SMS Configuration - Update
+    public function smsUpdate(Request $request, $id)
+    {
+        $config = CommunicationConfig::findOrFail($id);
+        if ($config->type !== 'sms') {
+            return redirect()->route('settings.communication.index')->with('error', 'Invalid configuration type.');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+            'sms_provider' => 'nullable|in:twilio,nexmo,aws_sns,messagebird,plivo,custom',
+            'sms_api_key' => 'nullable|string|max:255',
+            'sms_api_secret' => 'nullable|string|max:255',
+            'sms_from' => 'nullable|string|max:50',
+            'sms_api_url' => 'nullable|url|max:255',
+            'sms_region' => 'nullable|string|max:50',
+            'sms_country_code' => 'nullable|string|max:10',
+        ]);
+
+        $configData = $config->config;
+        $configData['sms_provider'] = $validated['sms_provider'] ?? $configData['sms_provider'] ?? 'twilio';
+        $configData['sms_api_key'] = $validated['sms_api_key'] ?? $configData['sms_api_key'] ?? '';
+        $configData['sms_from'] = $validated['sms_from'] ?? $configData['sms_from'] ?? '';
+        $configData['sms_api_url'] = $validated['sms_api_url'] ?? $configData['sms_api_url'] ?? '';
+        $configData['sms_region'] = $validated['sms_region'] ?? $configData['sms_region'] ?? '';
+        $configData['sms_country_code'] = $validated['sms_country_code'] ?? $configData['sms_country_code'] ?? '+1';
+        
+        // Only update secret if provided
+        if (!empty($validated['sms_api_secret'])) {
+            $configData['sms_api_secret'] = $validated['sms_api_secret'];
+        }
+
+        $config->update([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'is_active' => $validated['is_active'] ?? true,
+            'config' => $configData,
+        ]);
+
+        return redirect()->route('settings.communication.index')->with('success', 'SMS configuration updated successfully.');
+    }
+
+    // Set Primary Configuration
+    public function setPrimary($id)
+    {
+        $config = CommunicationConfig::findOrFail($id);
+        $config->setAsPrimary();
+        return back()->with('success', 'Configuration set as primary successfully.');
+    }
+
+    // Delete Configuration
+    public function destroy($id)
+    {
+        $config = CommunicationConfig::findOrFail($id);
+        $config->delete();
+        return back()->with('success', 'Configuration deleted successfully.');
     }
 
     public function testEmail(Request $request)
     {
         try {
             $email = $request->input('email');
+            $configId = $request->input('config_id');
             
             if (!$email) {
                 return response()->json([
@@ -416,12 +576,29 @@ class SettingsController extends Controller
                 ], 400);
             }
 
-            // Get email settings
-            $settings = Setting::getGroup('communication');
-            
-            // Use settings or fallback to config
-            $fromAddress = $settings['mail_from_address'] ?? config('mail.from.address');
-            $fromName = $settings['mail_from_name'] ?? config('mail.from.name');
+            // Get configuration
+            if ($configId) {
+                $config = CommunicationConfig::find($configId);
+                if ($config && $config->type === 'email') {
+                    $configData = $config->config;
+                    $fromAddress = $configData['mail_from_address'] ?? config('mail.from.address');
+                    $fromName = $configData['mail_from_name'] ?? config('mail.from.name');
+                } else {
+                    $fromAddress = config('mail.from.address');
+                    $fromName = config('mail.from.name');
+                }
+            } else {
+                // Use primary configuration
+                $primaryConfig = CommunicationConfig::getPrimary('email');
+                if ($primaryConfig) {
+                    $configData = $primaryConfig->config;
+                    $fromAddress = $configData['mail_from_address'] ?? config('mail.from.address');
+                    $fromName = $configData['mail_from_name'] ?? config('mail.from.name');
+                } else {
+                    $fromAddress = config('mail.from.address');
+                    $fromName = config('mail.from.name');
+                }
+            }
 
             Mail::raw('This is a test email from ShopSmart. Your email configuration is working correctly!', function ($message) use ($email, $fromAddress, $fromName) {
                 $message->to($email)
@@ -446,6 +623,7 @@ class SettingsController extends Controller
     {
         try {
             $phone = $request->input('phone');
+            $configId = $request->input('config_id');
             
             if (!$phone) {
                 return response()->json([
@@ -454,20 +632,37 @@ class SettingsController extends Controller
                 ], 400);
             }
 
-            // Get SMS settings
-            $settings = Setting::getGroup('communication');
-            
-            if (($settings['sms_enabled'] ?? '0') != '1') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'SMS is not enabled'
-                ], 400);
+            // Get configuration
+            if ($configId) {
+                $config = CommunicationConfig::find($configId);
+                if ($config && $config->type === 'sms' && $config->is_active) {
+                    $configData = $config->config;
+                    $provider = $configData['sms_provider'] ?? 'twilio';
+                    $apiKey = $configData['sms_api_key'] ?? '';
+                    $apiSecret = $configData['sms_api_secret'] ?? '';
+                    $from = $configData['sms_from'] ?? '';
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'SMS configuration not found or inactive'
+                    ], 400);
+                }
+            } else {
+                // Use primary configuration
+                $primaryConfig = CommunicationConfig::getPrimary('sms');
+                if ($primaryConfig && $primaryConfig->is_active) {
+                    $configData = $primaryConfig->config;
+                    $provider = $configData['sms_provider'] ?? 'twilio';
+                    $apiKey = $configData['sms_api_key'] ?? '';
+                    $apiSecret = $configData['sms_api_secret'] ?? '';
+                    $from = $configData['sms_from'] ?? '';
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No active SMS configuration found'
+                    ], 400);
+                }
             }
-
-            $provider = $settings['sms_provider'] ?? 'twilio';
-            $apiKey = $settings['sms_api_key'] ?? '';
-            $apiSecret = $settings['sms_api_secret'] ?? '';
-            $from = $settings['sms_from'] ?? '';
 
             if (empty($apiKey) || empty($apiSecret)) {
                 return response()->json([

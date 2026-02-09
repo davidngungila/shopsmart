@@ -201,10 +201,34 @@ Route::get('/financial/income', [FinancialController::class, 'income'])->name('f
     Route::post('/quotations', [SettingsController::class, 'updateQuotations'])->name('quotations.update');
     Route::get('/notifications', [SettingsController::class, 'notifications'])->name('notifications');
     Route::post('/notifications', [SettingsController::class, 'updateNotifications'])->name('notifications.update');
-    Route::get('/communication', [SettingsController::class, 'communication'])->name('communication');
-    Route::post('/communication', [SettingsController::class, 'updateCommunication'])->name('communication.update');
-    Route::post('/communication/test-email', [SettingsController::class, 'testEmail'])->name('communication.test-email');
-    Route::post('/communication/test-sms', [SettingsController::class, 'testSMS'])->name('communication.test-sms');
+    
+    // Communication Configurations
+    Route::prefix('communication')->name('communication.')->group(function () {
+        Route::get('/', [SettingsController::class, 'communicationIndex'])->name('index');
+        Route::post('/{id}/set-primary', [SettingsController::class, 'setPrimary'])->name('set-primary');
+        Route::delete('/{id}', [SettingsController::class, 'destroy'])->name('destroy');
+        
+        // Email Configurations
+        Route::prefix('email')->name('email.')->group(function () {
+            Route::get('/create', [SettingsController::class, 'emailCreate'])->name('create');
+            Route::post('/store', [SettingsController::class, 'emailStore'])->name('store');
+            Route::get('/{id}/edit', [SettingsController::class, 'emailEdit'])->name('edit');
+            Route::put('/{id}', [SettingsController::class, 'emailUpdate'])->name('update');
+        });
+        
+        // SMS Configurations
+        Route::prefix('sms')->name('sms.')->group(function () {
+            Route::get('/create', [SettingsController::class, 'smsCreate'])->name('create');
+            Route::post('/store', [SettingsController::class, 'smsStore'])->name('store');
+            Route::get('/{id}/edit', [SettingsController::class, 'smsEdit'])->name('edit');
+            Route::put('/{id}', [SettingsController::class, 'smsUpdate'])->name('update');
+        });
+        
+        // Test endpoints
+        Route::post('/test-email', [SettingsController::class, 'testEmail'])->name('test-email');
+        Route::post('/test-sms', [SettingsController::class, 'testSMS'])->name('test-sms');
+    });
+    
     Route::get('/backup', [SettingsController::class, 'backup'])->name('backup');
     Route::post('/backup/create', [SettingsController::class, 'createBackup'])->name('backup.create');
     Route::post('/backup/automation', [SettingsController::class, 'updateAutomation'])->name('backup.automation');

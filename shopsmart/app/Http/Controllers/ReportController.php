@@ -236,9 +236,14 @@ class ReportController extends Controller
 
     public function inventory(Request $request)
     {
+        // Handle export requests
+        if ($request->has('export')) {
+            return $this->exportInventory($request);
+        }
+
         $query = Product::with(['category', 'warehouse']);
 
-        // Filters
+        // Basic Filters
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
         }
@@ -249,12 +254,46 @@ class ReportController extends Controller
 
         if ($request->filled('stock_status')) {
             if ($request->stock_status === 'low') {
-                $query->whereRaw('stock_quantity <= low_stock_alert');
+                $query->whereRaw('stock_quantity <= low_stock_alert')
+                      ->where('stock_quantity', '>', 0);
             } elseif ($request->stock_status === 'out') {
                 $query->where('stock_quantity', '<=', 0);
             } elseif ($request->stock_status === 'in_stock') {
                 $query->where('stock_quantity', '>', 0);
             }
+        }
+
+        // Advanced Filters
+        if ($request->filled('stock_min')) {
+            $query->where('stock_quantity', '>=', $request->stock_min);
+        }
+
+        if ($request->filled('stock_max')) {
+            $query->where('stock_quantity', '<=', $request->stock_max);
+        }
+
+        if ($request->filled('cost_min')) {
+            $query->where('cost_price', '>=', $request->cost_min);
+        }
+
+        if ($request->filled('cost_max')) {
+            $query->where('cost_price', '<=', $request->cost_max);
+        }
+
+        if ($request->filled('price_min')) {
+            $query->where('selling_price', '>=', $request->price_min);
+        }
+
+        if ($request->filled('price_max')) {
+            $query->where('selling_price', '<=', $request->price_max);
+        }
+
+        if ($request->filled('active_only') && $request->active_only == '1') {
+            $query->where('is_active', true);
+        }
+
+        if ($request->filled('with_image') && $request->with_image == '1') {
+            $query->whereNotNull('image')->where('image', '!=', '');
         }
 
         if ($request->filled('search')) {
@@ -266,7 +305,19 @@ class ReportController extends Controller
             });
         }
 
-        $products = $query->orderBy('name')->paginate(50);
+        // Sorting
+        $sortBy = $request->get('sort_by', 'name');
+        $sortOrder = $request->get('sort_order', 'asc');
+
+        if ($sortBy === 'stock_value') {
+            $query->selectRaw('products.*, (stock_quantity * cost_price) as stock_value')
+                  ->orderBy('stock_value', $sortOrder);
+        } else {
+            $query->orderBy($sortBy, $sortOrder);
+        }
+
+        $perPage = $request->get('per_page', 50);
+        $products = $query->paginate($perPage)->appends($request->query());
 
         // Statistics
         $totalProducts = Product::count();
@@ -326,6 +377,156 @@ class ReportController extends Controller
             'productsByCategory', 'topProductsByValue', 'lowStockProducts', 
             'outOfStockProducts', 'stockMovements', 'categories', 'warehouses'
         ));
+    }
+
+    private function exportInventory(Request $request)
+    {
+        $query = Product::with(['category', 'warehouse']);
+
+        // Apply all filters (same as inventory method)
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('warehouse_id')) {
+            $query->where('warehouse_id', $request->warehouse_id);
+        }
+
+        if ($request->filled('stock_status')) {
+            if ($request->stock_status === 'low') {
+                $query->whereRaw('stock_quantity <= low_stock_alert')
+                      ->where('stock_quantity', '>', 0);
+            } elseif ($request->stock_status === 'out') {
+                $query->where('stock_quantity', '<=', 0);
+            } elseif ($request->stock_status === 'in_stock') {
+                $query->where('stock_quantity', '>', 0);
+            }
+        }
+
+        if ($request->filled('stock_min')) {
+            $query->where('stock_quantity', '>=', $request->stock_min);
+        }
+
+        if ($request->filled('stock_max')) {
+            $query->where('stock_quantity', '<=', $request->stock_max);
+        }
+
+        if ($request->filled('cost_min')) {
+            $query->where('cost_price', '>=', $request->cost_min);
+        }
+
+        if ($request->filled('cost_max')) {
+            $query->where('cost_price', '<=', $request->cost_max);
+        }
+
+        if ($request->filled('price_min')) {
+            $query->where('selling_price', '>=', $request->price_min);
+        }
+
+        if ($request->filled('price_max')) {
+            $query->where('selling_price', '<=', $request->price_max);
+        }
+
+        if ($request->filled('active_only') && $request->active_only == '1') {
+            $query->where('is_active', true);
+        }
+
+        if ($request->filled('with_image') && $request->with_image == '1') {
+            $query->whereNotNull('image')->where('image', '!=', '');
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
+
+        $products = $query->orderBy('name')->get();
+
+        $exportType = $request->get('export', 'csv');
+        $filename = 'inventory-report-' . date('Y-m-d-His') . '.' . $exportType;
+
+        if ($exportType === 'csv') {
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+
+            $callback = function() use ($products) {
+                $file = fopen('php://output', 'w');
+                
+                // Header row
+                fputcsv($file, [
+                    'Product Name', 'SKU', 'Barcode', 'Category', 'Warehouse',
+                    'Stock Quantity', 'Low Stock Alert', 'Cost Price', 'Selling Price',
+                    'Stock Value', 'Status'
+                ]);
+
+                // Data rows
+                foreach ($products as $product) {
+                    fputcsv($file, [
+                        $product->name,
+                        $product->sku ?? 'N/A',
+                        $product->barcode ?? 'N/A',
+                        $product->category->name ?? 'N/A',
+                        $product->warehouse->name ?? 'N/A',
+                        $product->stock_quantity,
+                        $product->low_stock_alert,
+                        $product->cost_price,
+                        $product->selling_price,
+                        $product->stock_quantity * $product->cost_price,
+                        $product->is_active ? 'Active' : 'Inactive'
+                    ]);
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        } elseif ($exportType === 'excel') {
+            // For Excel export, using tab-separated values (works in Excel)
+            $headers = [
+                'Content-Type' => 'application/vnd.ms-excel',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ];
+
+            $callback = function() use ($products) {
+                $file = fopen('php://output', 'w');
+                
+                // Header row
+                fputcsv($file, [
+                    'Product Name', 'SKU', 'Barcode', 'Category', 'Warehouse',
+                    'Stock Quantity', 'Low Stock Alert', 'Cost Price', 'Selling Price',
+                    'Stock Value', 'Status'
+                ], "\t");
+
+                // Data rows
+                foreach ($products as $product) {
+                    fputcsv($file, [
+                        $product->name,
+                        $product->sku ?? 'N/A',
+                        $product->barcode ?? 'N/A',
+                        $product->category->name ?? 'N/A',
+                        $product->warehouse->name ?? 'N/A',
+                        $product->stock_quantity,
+                        $product->low_stock_alert,
+                        $product->cost_price,
+                        $product->selling_price,
+                        $product->stock_quantity * $product->cost_price,
+                        $product->is_active ? 'Active' : 'Inactive'
+                    ], "\t");
+                }
+
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        }
+
+        return redirect()->route('reports.inventory');
     }
 
     public function customers()
