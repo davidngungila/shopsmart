@@ -6,6 +6,7 @@ use App\Models\Liability;
 use App\Models\ChartOfAccount;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class LiabilityController extends Controller
 {
@@ -102,5 +103,28 @@ class LiabilityController extends Controller
     {
         $liability->delete();
         return redirect()->route('liabilities.index')->with('success', 'Liability deleted successfully.');
+    }
+
+    public function pdf(Request $request)
+    {
+        $query = Liability::with(['account', 'supplier', 'user']);
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $liabilities = $query->latest()->get();
+        $totalLiabilities = $liabilities->sum('outstanding_balance');
+        $activeLiabilities = $liabilities->where('status', 'active')->sum('outstanding_balance');
+        $overdueLiabilities = $liabilities->where('status', 'overdue')->sum('outstanding_balance');
+
+        $pdf = Pdf::loadView('liabilities.pdf.index', compact('liabilities', 'totalLiabilities', 'activeLiabilities', 'overdueLiabilities'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('liabilities-report-' . now()->format('Y-m-d') . '.pdf');
     }
 }

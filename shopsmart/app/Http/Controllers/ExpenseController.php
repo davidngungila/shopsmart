@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ExpenseController extends Controller
 {
@@ -64,5 +65,20 @@ class ExpenseController extends Controller
     {
         $expense->delete();
         return redirect()->route('expenses.index')->with('success', 'Expense deleted successfully.');
+    }
+
+    public function pdf(Request $request)
+    {
+        $expenses = Expense::with('user')->latest()->get();
+        $totalAmount = $expenses->sum('amount');
+        $categoryBreakdown = Expense::selectRaw('category, SUM(amount) as total, COUNT(*) as count')
+            ->groupBy('category')
+            ->orderBy('total', 'desc')
+            ->get();
+
+        $pdf = Pdf::loadView('expenses.pdf.index', compact('expenses', 'totalAmount', 'categoryBreakdown'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('expenses-report-' . now()->format('Y-m-d') . '.pdf');
     }
 }

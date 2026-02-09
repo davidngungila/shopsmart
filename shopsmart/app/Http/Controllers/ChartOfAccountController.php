@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ChartOfAccount;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ChartOfAccountController extends Controller
 {
@@ -104,5 +105,36 @@ class ChartOfAccountController extends Controller
 
         $chartOfAccount->delete();
         return redirect()->route('chart-of-accounts.index')->with('success', 'Account deleted successfully.');
+    }
+
+    public function pdf(Request $request)
+    {
+        $query = ChartOfAccount::with('parentAccount');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('account_code', 'like', "%{$search}%")
+                  ->orWhere('account_name', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('account_type')) {
+            $query->where('account_type', $request->account_type);
+        }
+
+        if ($request->filled('is_active')) {
+            $query->where('is_active', $request->is_active == '1');
+        }
+
+        $accounts = $query->orderBy('account_code')->get();
+        $accountTypes = ['asset', 'liability', 'equity', 'revenue', 'expense'];
+        $totalAccounts = $accounts->count();
+        $totalBalance = $accounts->sum('current_balance');
+
+        $pdf = Pdf::loadView('chart-of-accounts.pdf.index', compact('accounts', 'accountTypes', 'totalAccounts', 'totalBalance'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download('chart-of-accounts-' . now()->format('Y-m-d') . '.pdf');
     }
 }

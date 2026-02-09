@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Capital;
 use App\Models\ChartOfAccount;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class CapitalController extends Controller
 {
@@ -93,5 +94,32 @@ class CapitalController extends Controller
     {
         $capital->delete();
         return redirect()->route('capital.index')->with('success', 'Capital transaction deleted successfully.');
+    }
+
+    public function pdf(Request $request)
+    {
+        $query = Capital::with(['account', 'user']);
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('transaction_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('transaction_date', '<=', $request->date_to);
+        }
+
+        $capitals = $query->latest()->get();
+        $totalContributions = Capital::where('type', 'contribution')->sum('amount');
+        $totalWithdrawals = Capital::where('type', 'withdrawal')->sum('amount');
+        $netCapital = $totalContributions - $totalWithdrawals;
+
+        $pdf = Pdf::loadView('capital.pdf.index', compact('capitals', 'totalContributions', 'totalWithdrawals', 'netCapital'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('capital-report-' . now()->format('Y-m-d') . '.pdf');
     }
 }

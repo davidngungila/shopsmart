@@ -133,21 +133,31 @@ Route::resource('transactions', TransactionController::class);
 
     // Chart of Accounts
     Route::resource('chart-of-accounts', ChartOfAccountController::class);
+    Route::get('/chart-of-accounts/pdf', [ChartOfAccountController::class, 'pdf'])->name('chart-of-accounts.pdf');
 
-// Expense Categories
+    // Expense Categories
     Route::resource('expense-categories', ExpenseCategoryController::class);
+    Route::get('/expense-categories/pdf', [ExpenseCategoryController::class, 'pdf'])->name('expense-categories.pdf');
 
     // Capital
     Route::resource('capital', CapitalController::class);
+    Route::get('/capital/pdf', [CapitalController::class, 'pdf'])->name('capital.pdf');
 
-// Liabilities
+    // Liabilities
     Route::resource('liabilities', LiabilityController::class);
+    Route::get('/liabilities/pdf', [LiabilityController::class, 'pdf'])->name('liabilities.pdf');
 
     // Bank Reconciliation
     Route::resource('bank-reconciliations', BankReconciliationController::class);
+    Route::get('/bank-reconciliations/pdf', [BankReconciliationController::class, 'pdf'])->name('bank-reconciliations.pdf');
 
-// Delivery Notes
+    // Delivery Notes
     Route::resource('delivery-notes', DeliveryNoteController::class);
+    Route::get('/delivery-notes/{deliveryNote}/pdf', [DeliveryNoteController::class, 'pdf'])->name('delivery-notes.pdf');
+    Route::get('/delivery-notes/pdf/list', [DeliveryNoteController::class, 'pdfList'])->name('delivery-notes.pdf.list');
+
+    // Expenses
+    Route::get('/expenses/pdf', [ExpenseController::class, 'pdf'])->name('expenses.pdf');
 
     // Financial Statements
     Route::get('/financial-statements/profit-loss', [FinancialStatementController::class, 'profitLoss'])->name('financial-statements.profit-loss');

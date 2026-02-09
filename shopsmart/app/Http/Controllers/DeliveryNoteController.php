@@ -8,6 +8,7 @@ use App\Models\Purchase;
 use App\Models\Customer;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class DeliveryNoteController extends Controller
 {
@@ -122,5 +123,43 @@ class DeliveryNoteController extends Controller
         $deliveryNote->items()->delete();
         $deliveryNote->delete();
         return redirect()->route('delivery-notes.index')->with('success', 'Delivery note deleted successfully.');
+    }
+
+    public function pdf(DeliveryNote $deliveryNote)
+    {
+        $deliveryNote->load(['customer', 'supplier', 'sale', 'purchase', 'items.product', 'user']);
+        
+        $pdf = Pdf::loadView('delivery-notes.pdf.show', compact('deliveryNote'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('delivery-note-' . $deliveryNote->delivery_number . '.pdf');
+    }
+
+    public function pdfList(Request $request)
+    {
+        $query = DeliveryNote::with(['customer', 'supplier', 'sale', 'purchase']);
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('delivery_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('delivery_date', '<=', $request->date_to);
+        }
+
+        $deliveryNotes = $query->latest()->get();
+
+        $pdf = Pdf::loadView('delivery-notes.pdf.index', compact('deliveryNotes'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download('delivery-notes-report-' . now()->format('Y-m-d') . '.pdf');
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ExpenseCategory;
 use App\Models\ChartOfAccount;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ExpenseCategoryController extends Controller
 {
@@ -93,5 +94,31 @@ class ExpenseCategoryController extends Controller
 
         $expenseCategory->delete();
         return redirect()->route('expense-categories.index')->with('success', 'Category deleted successfully.');
+    }
+
+    public function pdf(Request $request)
+    {
+        $query = ExpenseCategory::with('account');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('is_active')) {
+            $query->where('is_active', $request->is_active == '1');
+        }
+
+        $categories = $query->orderBy('sort_order')->orderBy('name')->get();
+        $totalCategories = $categories->count();
+        $activeCategories = $categories->where('is_active', true)->count();
+
+        $pdf = Pdf::loadView('expense-categories.pdf.index', compact('categories', 'totalCategories', 'activeCategories'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('expense-categories-' . now()->format('Y-m-d') . '.pdf');
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BankReconciliation;
 use App\Models\ChartOfAccount;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class BankReconciliationController extends Controller
 {
@@ -118,5 +119,30 @@ class BankReconciliationController extends Controller
     {
         $bankReconciliation->delete();
         return redirect()->route('bank-reconciliations.index')->with('success', 'Bank reconciliation deleted successfully.');
+    }
+
+    public function pdf(Request $request)
+    {
+        $query = BankReconciliation::with(['account', 'user']);
+
+        if ($request->filled('account_id')) {
+            $query->where('account_id', $request->account_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $reconciliations = $query->latest()->get();
+        $accounts = ChartOfAccount::where('account_type', 'asset')
+            ->where('account_category', 'current_asset')
+            ->where('is_active', true)
+            ->orderBy('account_name')
+            ->get();
+
+        $pdf = Pdf::loadView('bank-reconciliations.pdf.index', compact('reconciliations', 'accounts'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('bank-reconciliation-report-' . now()->format('Y-m-d') . '.pdf');
     }
 }
