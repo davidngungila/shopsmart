@@ -11,7 +11,8 @@ return new class extends Migration
         if (Schema::hasTable('expenses')) {
             Schema::table('expenses', function (Blueprint $table) {
                 if (!Schema::hasColumn('expenses', 'category')) {
-                    $table->string('category')->nullable()->after('expense_number');
+                    // Add category column without specifying position to avoid errors
+                    $table->string('category')->nullable();
                 }
             });
         }
