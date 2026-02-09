@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Capital extends Model
 {
+    protected $table = 'capital';
+
     protected $fillable = [
         'transaction_number', 'type', 'amount', 'description',
         'account_id', 'user_id', 'transaction_date', 'reference'
