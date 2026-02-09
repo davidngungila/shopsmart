@@ -370,9 +370,6 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice #</th>
-                        <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                        <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
                         <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
                         <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                         <th class="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -383,25 +380,6 @@
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
                             <div class="text-xs sm:text-sm font-medium text-gray-900">#{{ $sale->invoice_number ?? str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}</div>
-                        </td>
-                        <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
-                            <div class="text-xs sm:text-sm text-gray-900 font-medium">{{ $sale->customer->name ?? 'Walk-in Customer' }}</div>
-                            @if($sale->customer)
-                            <div class="text-xs text-gray-500">{{ $sale->customer->email ?? $sale->customer->phone ?? '' }}</div>
-                            @endif
-                        </td>
-                        <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
-                            @php
-                                $itemCount = $sale->items ? $sale->items->count() : 0;
-                                $itemQuantity = $sale->items ? $sale->items->sum('quantity') : 0;
-                            @endphp
-                            <div class="text-xs sm:text-sm text-gray-900">{{ $itemCount }} items</div>
-                            <div class="text-xs text-gray-500">{{ number_format($itemQuantity) }} units</div>
-                        </td>
-                        <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
-                                {{ str_replace('_', ' ', $sale->payment_method ?? 'cash') }}
-                            </span>
                         </td>
                         <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
                             <div class="text-xs sm:text-sm text-gray-900">{{ $sale->created_at->setTimezone('Africa/Dar_es_Salaam')->format('M d, Y') }}</div>
@@ -436,7 +414,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-12 text-center">
+                        <td colspan="4" class="px-6 py-12 text-center">
                             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
