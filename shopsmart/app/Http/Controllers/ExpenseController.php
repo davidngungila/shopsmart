@@ -28,7 +28,53 @@ class ExpenseController extends Controller
             'description' => 'nullable|string',
             'payment_method' => 'required|in:cash,card,bank,mobile_money',
             'expense_date' => 'required|date',
+            'reference_number' => 'nullable|string|max:100',
+            'tax_amount' => 'nullable|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0',
+            'payment_reference' => 'nullable|string|max:100',
+            'vendor_name' => 'nullable|string|max:255',
+            'vendor_contact' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'tags' => 'nullable|string|max:255',
+            'receipt' => 'nullable|file|mimes:jpeg,jpg,png,pdf|max:10240',
         ]);
+
+        // Build description with additional details
+        $descriptionParts = [];
+        if ($request->filled('description')) {
+            $descriptionParts[] = $request->description;
+        }
+        if ($request->filled('vendor_name')) {
+            $descriptionParts[] = "Vendor: " . $request->vendor_name;
+        }
+        if ($request->filled('reference_number')) {
+            $descriptionParts[] = "Reference: " . $request->reference_number;
+        }
+        if ($request->filled('location')) {
+            $descriptionParts[] = "Location: " . $request->location;
+        }
+        if ($request->filled('tags')) {
+            $descriptionParts[] = "Tags: " . $request->tags;
+        }
+        if ($request->filled('payment_reference')) {
+            $descriptionParts[] = "Payment Ref: " . $request->payment_reference;
+        }
+        
+        $validated['description'] = implode("\n", $descriptionParts);
+        
+        // Handle receipt upload
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            $fileName = 'expense_' . time() . '_' . $file->getClientOriginalName();
+            $file->storeAs('expenses/receipts', $fileName, 'public');
+            $validated['receipt'] = 'expenses/receipts/' . $fileName;
+        }
+
+        // Calculate total amount including tax and discount
+        $baseAmount = $validated['amount'];
+        $taxAmount = $validated['tax_amount'] ?? 0;
+        $discount = $validated['discount'] ?? 0;
+        $validated['amount'] = $baseAmount + $taxAmount - $discount;
 
         $validated['expense_number'] = 'EXP-' . strtoupper(Str::random(8));
         $validated['user_id'] = auth()->id() ?? 1;
