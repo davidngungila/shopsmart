@@ -66,6 +66,7 @@ Route::resource('stock-movements', StockMovementController::class);
     Route::get('/sales/returns', [SaleController::class, 'returns'])->name('sales.returns');
     Route::get('/sales/{sale}/print', [SaleController::class, 'print'])->name('sales.print');
     Route::get('/sales/{sale}/pdf', [SaleController::class, 'pdf'])->name('sales.pdf');
+    Route::post('/sales/{sale}/record-payment', [SaleController::class, 'recordPayment'])->name('sales.record-payment');
     Route::resource('sales', SaleController::class);
     Route::get('/pos', [POSController::class, 'index'])->name('pos.index');
     Route::post('/pos/complete', [POSController::class, 'complete'])->name('pos.complete');

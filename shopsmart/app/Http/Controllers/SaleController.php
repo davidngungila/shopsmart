@@ -387,6 +387,54 @@ class SaleController extends Controller
     }
 
     /**
+     * Record payment for a credit sale
+     */
+    public function recordPayment(Request $request, Sale $sale)
+    {
+        if ($sale->payment_method !== 'credit') {
+            return response()->json([
+                'success' => false,
+                'message' => 'This sale is not a credit sale.',
+            ], 400);
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method' => 'required|in:cash,card,mobile_money,bank_transfer',
+            'payment_date' => 'required|date',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        if ($validated['amount'] > $sale->balance) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment amount cannot exceed the balance of TZS ' . number_format($sale->balance, 2),
+            ], 400);
+        }
+
+        $payment = \App\Models\SalePayment::create([
+            'sale_id' => $sale->id,
+            'amount' => $validated['amount'],
+            'payment_method' => $validated['payment_method'],
+            'payment_date' => $validated['payment_date'],
+            'notes' => $validated['notes'] ?? null,
+            'user_id' => auth()->id(),
+        ]);
+
+        $sale->load('payments');
+
+        return response()->json([
+            'success' => true,
+            'payment' => $payment,
+            'sale' => $sale,
+            'total_paid' => $sale->total_paid,
+            'balance' => $sale->balance,
+            'is_fully_paid' => $sale->isFullyPaid(),
+            'message' => 'Payment recorded successfully.',
+        ]);
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(string $id)

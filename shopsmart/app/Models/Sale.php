@@ -40,4 +40,24 @@ class Sale extends Model
     {
         return $this->hasMany(SaleItem::class);
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(SalePayment::class);
+    }
+
+    public function getTotalPaidAttribute()
+    {
+        return $this->payments()->sum('amount');
+    }
+
+    public function getBalanceAttribute()
+    {
+        return $this->total - $this->total_paid;
+    }
+
+    public function isFullyPaid()
+    {
+        return $this->balance <= 0;
+    }
 }
