@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -250,13 +251,18 @@ class SaleController extends Controller
 
     public function returns(Request $request)
     {
-        $query = Sale::where('status', 'refunded')
+        // Get sales returns
+        $salesQuery = Sale::where('status', 'refunded')
             ->with(['customer', 'user', 'items.product']);
 
-        // Filters
+        // Get stock movement returns
+        $stockMovementsQuery = StockMovement::where('type', 'return')
+            ->with(['product', 'warehouse', 'user']);
+
+        // Apply filters to sales
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $salesQuery->where(function($q) use ($search) {
                 $q->where('invoice_number', 'like', "%{$search}%")
                   ->orWhereHas('customer', function($q) use ($search) {
                       $q->where('name', 'like', "%{$search}%");
@@ -264,40 +270,172 @@ class SaleController extends Controller
             });
         }
 
+        // Apply filters to stock movements
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $stockMovementsQuery->where(function($q) use ($search) {
+                $q->whereHas('product', function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('sku', 'like', "%{$search}%");
+                });
+            });
+        }
+
         if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+            $salesQuery->whereDate('created_at', '>=', $request->date_from);
+            $stockMovementsQuery->whereDate('created_at', '>=', $request->date_from);
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+            $salesQuery->whereDate('created_at', '<=', $request->date_to);
+            $stockMovementsQuery->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Statistics
-        $totalReturns = Sale::where('status', 'refunded')->count();
-        $totalRefundAmount = Sale::where('status', 'refunded')->sum('total');
-        $todayReturns = Sale::where('status', 'refunded')
+        // Get filtered results
+        $sales = $salesQuery->latest()->get();
+        $stockMovements = $stockMovementsQuery->latest()->get();
+
+        // Combine and sort by date
+        $allReturns = collect();
+        
+        // Add sales returns
+        foreach ($sales as $sale) {
+            $allReturns->push([
+                'type' => 'sale',
+                'id' => $sale->id,
+                'reference' => $sale->invoice_number ?? '#' . $sale->id,
+                'date' => $sale->created_at,
+                'amount' => $sale->total,
+                'customer' => $sale->customer,
+                'items_count' => $sale->items->count(),
+                'data' => $sale,
+            ]);
+        }
+        
+        // Add stock movement returns
+        foreach ($stockMovements as $movement) {
+            $estimatedValue = ($movement->product->selling_price ?? 0) * $movement->quantity;
+            $allReturns->push([
+                'type' => 'stock_movement',
+                'id' => $movement->id,
+                'reference' => 'SM-' . $movement->id,
+                'date' => $movement->created_at,
+                'amount' => $estimatedValue,
+                'customer' => null,
+                'items_count' => 1,
+                'data' => $movement,
+            ]);
+        }
+
+        // Sort by date descending and paginate
+        $sortedReturns = $allReturns->sortByDesc('date');
+        $perPage = 20;
+        $currentPage = $request->get('page', 1);
+        $paginatedReturns = new \Illuminate\Pagination\LengthAwarePaginator(
+            $sortedReturns->forPage($currentPage, $perPage),
+            $sortedReturns->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        // Statistics (include both types)
+        $totalSalesReturns = Sale::where('status', 'refunded')->count();
+        $totalStockReturns = StockMovement::where('type', 'return')->count();
+        $totalReturns = $totalSalesReturns + $totalStockReturns;
+        
+        $totalSalesRefundAmount = Sale::where('status', 'refunded')->sum('total');
+        $totalStockRefundAmount = StockMovement::where('type', 'return')
+            ->with('product')
+            ->get()
+            ->sum(function($movement) {
+                return ($movement->product->selling_price ?? 0) * $movement->quantity;
+            });
+        $totalRefundAmount = $totalSalesRefundAmount + $totalStockRefundAmount;
+        
+        $todaySalesReturns = Sale::where('status', 'refunded')
             ->whereDate('created_at', today())
             ->count();
-        $todayRefundAmount = Sale::where('status', 'refunded')
+        $todayStockReturns = StockMovement::where('type', 'return')
+            ->whereDate('created_at', today())
+            ->count();
+        $todayReturns = $todaySalesReturns + $todayStockReturns;
+        
+        $todaySalesRefundAmount = Sale::where('status', 'refunded')
             ->whereDate('created_at', today())
             ->sum('total');
-        $thisMonthRefundAmount = Sale::where('status', 'refunded')
+        $todayStockRefundAmount = StockMovement::where('type', 'return')
+            ->whereDate('created_at', today())
+            ->with('product')
+            ->get()
+            ->sum(function($movement) {
+                return ($movement->product->selling_price ?? 0) * $movement->quantity;
+            });
+        $todayRefundAmount = $todaySalesRefundAmount + $todayStockRefundAmount;
+        
+        $thisMonthSalesRefundAmount = Sale::where('status', 'refunded')
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->sum('total');
+        $thisMonthStockRefundAmount = StockMovement::where('type', 'return')
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->with('product')
+            ->get()
+            ->sum(function($movement) {
+                return ($movement->product->selling_price ?? 0) * $movement->quantity;
+            });
+        $thisMonthRefundAmount = $thisMonthSalesRefundAmount + $thisMonthStockRefundAmount;
 
-        // Monthly returns trend
-        $monthlyReturns = Sale::where('status', 'refunded')
+        // Monthly returns trend (combine both)
+        $monthlySalesReturns = Sale::where('status', 'refunded')
             ->where('created_at', '>=', now()->subMonths(6))
             ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count, SUM(total) as total')
             ->groupBy('month')
-            ->orderBy('month')
-            ->get();
+            ->get()
+            ->keyBy('month');
+            
+        $monthlyStockReturns = StockMovement::where('type', 'return')
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->with('product')
+            ->get()
+            ->groupBy(function($movement) {
+                return $movement->created_at->format('Y-m');
+            })
+            ->map(function($group) {
+                return [
+                    'month' => $group->first()->created_at->format('Y-m'),
+                    'count' => $group->count(),
+                    'total' => $group->sum(function($movement) {
+                        return ($movement->product->selling_price ?? 0) * $movement->quantity;
+                    })
+                ];
+            });
+            
+        $monthlyReturns = collect();
+        $allMonths = $monthlySalesReturns->keys()->merge($monthlyStockReturns->keys())->unique()->sort();
+        foreach ($allMonths as $month) {
+            $salesData = $monthlySalesReturns->get($month, (object)['count' => 0, 'total' => 0]);
+            $stockData = $monthlyStockReturns->get($month, ['count' => 0, 'total' => 0]);
+            $monthlyReturns->push((object)[
+                'month' => $month,
+                'count' => ($salesData->count ?? 0) + ($stockData['count'] ?? 0),
+                'total' => ($salesData->total ?? 0) + ($stockData['total'] ?? 0),
+            ]);
+        }
 
-        $sales = $query->latest()->paginate(20);
         $customers = \App\Models\Customer::orderBy('name')->get();
 
-        return view('sales.returns', compact('sales', 'totalReturns', 'totalRefundAmount', 'todayReturns', 'todayRefundAmount', 'thisMonthRefundAmount', 'monthlyReturns', 'customers'));
+        return view('sales.returns', compact(
+            'paginatedReturns', 
+            'totalReturns', 
+            'totalRefundAmount', 
+            'todayReturns', 
+            'todayRefundAmount', 
+            'thisMonthRefundAmount', 
+            'monthlyReturns', 
+            'customers'
+        ));
     }
 
     /**

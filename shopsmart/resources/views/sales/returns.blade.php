@@ -126,31 +126,49 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($sales ?? [] as $sale)
+                    @forelse($paginatedReturns ?? [] as $return)
                     <tr class="hover:bg-gray-50">
                         <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">#{{ $sale->invoice_number ?? $sale->id }}</div>
+                            <div class="text-sm font-medium text-gray-900">{{ $return['reference'] }}</div>
+                            @if($return['type'] === 'stock_movement')
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">Stock Movement</span>
+                            </div>
+                            @else
+                            <div class="text-xs text-gray-500 mt-1">
+                                <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs">Sale Return</span>
+                            </div>
+                            @endif
                         </td>
                         <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ $sale->created_at->setTimezone('Africa/Dar_es_Salaam')->format('M d, Y') }}
-                            <div class="text-xs text-gray-400">{{ $sale->created_at->setTimezone('Africa/Dar_es_Salaam')->format('h:i A') }}</div>
+                            {{ $return['date']->setTimezone('Africa/Dar_es_Salaam')->format('M d, Y') }}
+                            <div class="text-xs text-gray-400">{{ $return['date']->setTimezone('Africa/Dar_es_Salaam')->format('h:i A') }}</div>
                         </td>
                         <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-600 text-right">
-                            TZS {{ number_format($sale->total, 0) }}
+                            TZS {{ number_format($return['amount'], 0) }}
                         </td>
                         <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex items-center justify-end space-x-2">
-                                <a href="{{ route('sales.show', $sale) }}" class="text-[#009245] hover:text-[#007a38]" title="View">
+                                @if($return['type'] === 'sale')
+                                <a href="{{ route('sales.show', $return['data']) }}" class="text-[#009245] hover:text-[#007a38]" title="View">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                     </svg>
                                 </a>
-                                <a href="{{ route('sales.print', $sale) }}" target="_blank" class="text-blue-600 hover:text-blue-900" title="Print Receipt">
+                                <a href="{{ route('sales.print', $return['data']) }}" target="_blank" class="text-blue-600 hover:text-blue-900" title="Print Receipt">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                                     </svg>
                                 </a>
+                                @else
+                                <a href="{{ route('stock-movements.show', $return['data']) }}" class="text-[#009245] hover:text-[#007a38]" title="View Stock Movement">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                </a>
+                                @endif
                             </div>
                         </td>
                     </tr>
@@ -164,9 +182,9 @@
         </div>
 
         <!-- Pagination -->
-        @if(isset($sales) && $sales->hasPages())
+        @if(isset($paginatedReturns) && $paginatedReturns->hasPages())
         <div class="px-4 sm:px-6 py-4 border-t border-gray-200">
-            {{ $sales->links() }}
+            {{ $paginatedReturns->links() }}
         </div>
         @endif
     </div>
