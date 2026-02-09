@@ -33,6 +33,7 @@
             class="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
             x-cloak
             style="display: none;"
+            @touchstart="mobileMenuOpen = false"
         ></div>
 
         <!-- Mobile Menu Toggle -->
@@ -55,7 +56,7 @@
             id="sidebar" 
             :class="mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'"
             class="w-64 bg-white border-r border-gray-200 fixed h-screen overflow-y-auto z-30 lg:translate-x-0 transition-transform duration-300 ease-in-out"
-            @click.away="if (window.innerWidth < 1024) mobileMenuOpen = false"
+            @click.stop
         >
             <div class="p-4">
                 <div class="flex items-center space-x-3 mb-8">
