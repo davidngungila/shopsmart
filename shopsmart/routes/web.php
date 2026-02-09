@@ -127,9 +127,12 @@ Route::resource('stock-movements', StockMovementController::class);
     // Financial
     Route::get('/financial', [FinancialController::class, 'index'])->name('financial.index');
 Route::get('/financial/income', [FinancialController::class, 'income'])->name('financial.income');
-Route::resource('expenses', ExpenseController::class);
-Route::resource('transactions', TransactionController::class);
     Route::get('/financial/profit-loss', [FinancialController::class, 'profitLoss'])->name('financial.profit-loss');
+    
+    // Expenses - PDF route must come BEFORE resource route
+    Route::get('/expenses/pdf', [ExpenseController::class, 'pdf'])->name('expenses.pdf');
+    Route::resource('expenses', ExpenseController::class);
+    Route::resource('transactions', TransactionController::class);
 
     // Chart of Accounts - PDF route must come BEFORE resource route
     Route::get('/chart-of-accounts/pdf', [ChartOfAccountController::class, 'pdf'])->name('chart-of-accounts.pdf');
@@ -155,9 +158,6 @@ Route::resource('transactions', TransactionController::class);
     Route::get('/delivery-notes/pdf/list', [DeliveryNoteController::class, 'pdfList'])->name('delivery-notes.pdf.list');
     Route::get('/delivery-notes/{deliveryNote}/pdf', [DeliveryNoteController::class, 'pdf'])->name('delivery-notes.pdf');
     Route::resource('delivery-notes', DeliveryNoteController::class);
-
-    // Expenses - PDF route must come BEFORE resource route
-    Route::get('/expenses/pdf', [ExpenseController::class, 'pdf'])->name('expenses.pdf');
 
     // Financial Statements
     Route::get('/financial-statements/profit-loss', [FinancialStatementController::class, 'profitLoss'])->name('financial-statements.profit-loss');
