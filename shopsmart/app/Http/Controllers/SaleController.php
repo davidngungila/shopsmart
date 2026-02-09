@@ -321,7 +321,7 @@ class SaleController extends Controller
      */
     public function show(Sale $sale)
     {
-        $sale->load(['customer', 'user', 'items.product', 'warehouse']);
+        $sale->load(['customer', 'user', 'items.product', 'warehouse', 'payments.user']);
         return view('sales.show', compact('sale'));
     }
 
