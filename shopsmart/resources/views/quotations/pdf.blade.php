@@ -5,42 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quotation {{ $quotation->quotation_number }} - {{ $settings['company_name'] ?? 'ShopSmart' }}</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         @page {
+            margin: 10mm 12mm;
             size: A4;
-            margin: 0;
         }
         body { 
             font-family: 'DM Sans', 'Roboto', Arial, sans-serif; 
-            padding: 0;
+            font-size: 9pt;
+            line-height: 1.4;
+            color: #333;
             margin: 0;
-            color: #1f2937; 
-            background: #fff;
-            font-size: 12px;
-            line-height: 1.5;
-        }
-        .container { 
-            max-width: 210mm;
-            margin: 0 auto;
-            background: #fff;
+            padding: 0;
         }
         
         /* Header Image - Full Width */
+        .header {
+            border-bottom: 3px solid #009245;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+            width: 100%;
+        }
+        
         .header-image {
             width: 100%;
+            max-width: 100%;
             height: auto;
-            max-height: 80mm;
-            object-fit: cover;
             display: block;
-            margin-bottom: 0;
+            margin: 0 auto 15px auto;
         }
         
         /* Header Section */
         .header-section {
             background: linear-gradient(135deg, #009245 0%, #007a38 100%);
-            padding: 20px 30px;
+            padding: 15px 20px;
             color: #fff;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
+            border-radius: 4px;
         }
         .header-content {
             display: flex;
@@ -300,18 +301,18 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header Image - Full Width -->
+    <!-- Header Image -->
+    <div class="header">
         @php
             $headerImagePath = public_path('header-mfumo.png');
-            $headerImageBase64 = '';
+            $headerBase64 = '';
             if (file_exists($headerImagePath)) {
                 $headerImageData = file_get_contents($headerImagePath);
-                $headerImageBase64 = 'data:image/png;base64,' . base64_encode($headerImageData);
+                $headerBase64 = 'data:image/png;base64,' . base64_encode($headerImageData);
             }
         @endphp
-        @if($headerImageBase64)
-        <img src="{{ $headerImageBase64 }}" alt="Header" class="header-image">
+        @if($headerBase64)
+        <img src="{{ $headerBase64 }}" alt="FeedTan Header" class="header-image">
         @endif
 
         <!-- Header Section -->
