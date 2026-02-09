@@ -345,10 +345,6 @@
     });
 </script>
 @endsection
-@else
-@section('scripts')
-@show
-@endsection
 @endif
 
 
