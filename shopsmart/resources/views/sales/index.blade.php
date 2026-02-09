@@ -360,6 +360,11 @@
                             @endif
                         </td>
                         <td class="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-xs sm:text-sm font-medium">
+                            @php
+                                $sale->load('payments');
+                                $totalPaid = $sale->payments->sum('amount');
+                                $balance = $sale->total - $totalPaid;
+                            @endphp
                             <div class="flex items-center justify-end space-x-2" x-data="{ open: false }">
                                 @if($sale->payment_method === 'credit' && $balance > 0)
                                 <button onclick="openPaymentModal({{ $sale->id }}, {{ $sale->total }}, {{ $totalPaid }}, {{ $balance }})" class="px-3 py-1.5 text-xs text-white rounded flex items-center space-x-1" style="background-color: #009245;" onmouseover="this.style.backgroundColor='#007a38'" onmouseout="this.style.backgroundColor='#009245'">
