@@ -10,7 +10,7 @@ class SaleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Sale::with(['customer', 'user', 'items', 'items.product']);
+        $query = Sale::with(['customer', 'user', 'items', 'items.product', 'payments']);
 
         // Date range filter with defaults
         $dateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->toDateString();
