@@ -595,6 +595,9 @@ class SettingsController extends Controller
             $mailer = config('mail.default', 'smtp');
             $fromAddress = config('mail.from.address');
             $fromName = config('mail.from.name');
+            $host = null;
+            $port = null;
+            $encryption = null;
 
             if (is_array($configData)) {
                 $mailer = $configData['mail_mailer'] ?? $mailer;
@@ -611,6 +614,9 @@ class SettingsController extends Controller
                         'mail.mailers.smtp.username' => $configData['mail_username'] ?? config('mail.mailers.smtp.username'),
                         'mail.mailers.smtp.password' => $configData['mail_password'] ?? config('mail.mailers.smtp.password'),
                     ]);
+                    $host = $configData['mail_host'] ?? null;
+                    $port = $configData['mail_port'] ?? null;
+                    $encryption = $configData['mail_encryption'] ?? null;
                 } else {
                     // At least ensure default mailer matches selected one (for non-smtp drivers)
                     config([
@@ -619,14 +625,27 @@ class SettingsController extends Controller
                 }
             }
 
-            Mail::mailer($mailer)->raw(
-                'This is a test email from ShopSmart. Your email configuration is working correctly!',
-                function ($message) use ($email, $fromAddress, $fromName) {
-                    $message->to($email)
-                        ->subject('ShopSmart - Test Email')
-                        ->from($fromAddress, $fromName);
-                }
-            );
+            $companyName = config('app.name', 'TmcsSmart');
+            $details = [
+                'mailer' => $mailer,
+                'from_address' => $fromAddress,
+                'from_name' => $fromName,
+                'host' => $host,
+                'port' => $port,
+                'encryption' => $encryption,
+                'environment' => app()->environment(),
+                'sent_at' => now()->toDateTimeString(),
+            ];
+
+            Mail::mailer($mailer)->send('emails.test-email', [
+                'companyName' => $companyName,
+                'recipient' => $email,
+                'details' => $details,
+            ], function ($message) use ($email, $fromAddress, $fromName, $companyName) {
+                $message->to($email)
+                    ->subject($companyName . ' - Email Configuration Test')
+                    ->from($fromAddress, $fromName ?: $companyName);
+            });
 
             return response()->json([
                 'success' => true,
