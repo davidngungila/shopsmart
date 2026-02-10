@@ -811,7 +811,7 @@
                                 @auth
                                     @php
                                         $user = auth()->user();
-                                        $avatarUrl = $user->avatar ? asset('storage/' . $user->avatar) : null;
+                                        $avatarUrl = $user->avatar_url;
                                         $userInitials = strtoupper(substr($user->name, 0, 1));
                                         $userRole = $user->role ?? 'User';
                                         $roleColors = [
@@ -862,7 +862,7 @@
                                     @auth
                                         @php
                                             $user = auth()->user();
-                                            $avatarUrl = $user->avatar ? asset('storage/' . $user->avatar) : null;
+                                            $avatarUrl = $user->avatar_url;
                                             $userInitials = strtoupper(substr($user->name, 0, 1));
                                             $userRole = $user->role ?? 'User';
                                             $roleColors = [

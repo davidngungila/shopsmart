@@ -66,4 +66,25 @@ class User extends Authenticatable
     {
         return $this->hasOne(Employee::class);
     }
+
+    /**
+     * Get the avatar URL attribute.
+     * Normalizes the path and generates the correct public URL.
+     */
+    public function getAvatarUrlAttribute()
+    {
+        if (!$this->avatar) {
+            return null;
+        }
+
+        // Remove 'app/public/' if it exists in the path
+        $path = str_replace('app/public/', '', $this->avatar);
+        $path = str_replace('public/', '', $path);
+        
+        // Ensure path doesn't start with '/'
+        $path = ltrim($path, '/');
+        
+        // Generate the correct public URL
+        return asset('storage/' . $path);
+    }
 }
