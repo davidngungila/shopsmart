@@ -937,6 +937,8 @@
         </div>
     </div>
 
+    {{-- Page-specific scripts --}}
+    @stack('scripts')
     @yield('scripts')
     <script>
         // Mobile menu is now handled by Alpine.js in the template
